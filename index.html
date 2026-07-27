@@ -105,7 +105,7 @@ let state = { view:'booking', step:1, slots:[], selectedSlot:null, images:{front
 const app = document.getElementById('app');
 
 function esc(s){ return (s||'').toString().replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function fmtDate(d){ const dt = new Date(d+'T00:00:00'); return dt.toLocaleDateString('ar-IQ', { weekday:'long', year:'numeric', month:'long', day:'numeric' }); }
+function fmtDate(d){ const s = String(d).split('T')[0]; const dt = new Date(s+'T00:00:00'); return dt.toLocaleDateString('ar-IQ', { weekday:'long', year:'numeric', month:'long', day:'numeric' }); }
 
 async function api(path, opts={}){
   const headers = { 'Content-Type':'application/json', ...(opts.headers||{}) };
