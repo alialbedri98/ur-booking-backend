@@ -1,11 +1,13 @@
 const express = require('express');
 const cors = require('cors');
+const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 const { pool, initDb } = require('./db');
 
 const app = express();
+app.use(cors());
 app.use(cors());
 app.use(express.json({ limit: '15mb' })); // allow room for the 3 attached images
 
