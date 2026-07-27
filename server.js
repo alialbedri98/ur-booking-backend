@@ -183,6 +183,20 @@ app.post('/api/admin/change-password', requireAuth, async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-initDb().then(() => {
+
+async function ensureAdmin() {
+  const username = process.env.ADMIN_USERNAME || 'admin';
+  const password = process.env.ADMIN_PASSWORD || 'ChangeMe123!';
+  const existing = await pool.query('SELECT id FROM admins WHERE username=$1', [username]);
+  if (existing.rows.length === 0) {
+    const hash = await bcrypt.hash(password, 10);
+    await pool.query('INSERT INTO admins (username, password_hash) VALUES ($1,$2)', [username, hash]);
+    console.log('✔ Admin account created:', username);
+  } else {
+    console.log('✔ Admin account already exists');
+  }
+}
+
+initDb().then(ensureAdmin).then(() => {
   app.listen(PORT, () => console.log(`✔ Server running on port ${PORT}`));
 });
