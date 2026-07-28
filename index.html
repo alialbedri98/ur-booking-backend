@@ -6,6 +6,8 @@
 <title>مدينة أور السياحية | حجز المواعيد</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Cairo:wght@400;500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   :root{
     --lapis:#1B3A5C; --lapis-deep:#122843; --clay:#C1652F; --clay-deep:#A6501F;
@@ -96,6 +98,7 @@
 <main id="app"></main>
 <button class="admin-link" onclick="goAdmin()">دخول الإدارة</button>
 <footer>مدينة أور السياحية — نظام حجز المواعيد الإلكتروني</footer>
+<div id="pdfTemplate" style="position:fixed; top:-9999px; left:-9999px; width:750px; background:#fff; padding:40px; font-family:'Cairo',sans-serif; color:#2B2420; direction:rtl; z-index:-1;"></div>
 
 <script>
 // ================= CONFIG =================
@@ -277,8 +280,75 @@ function renderConfirm(){
         <div><b>الموعد:</b> ${fmtDate(b.date)} — الساعة <span class="num">${b.time}</span></div>
         <div><b>الجامعة / الكلية / القسم:</b> ${esc(b.university)} / ${esc(b.college)} / ${esc(b.department)}</div>
       </div>
-      <button class="btn btn-primary" onclick="newBooking()">إجراء حجز آخر</button>
+      <div class="summary-box" style="text-align:right;">
+        <h3 style="margin-top:0;">التعهد بالالتزام بالشروط والقوانين</h3>
+        <ol style="padding-right:20px; line-height:2; font-size:13.5px;">
+          <li>مدة الحجز محددة بساعتين (2) فقط من الوقت المحدد.</li>
+          <li>الإدارة غير مسؤولة عن أي تأخير في بدء الفعالية، ويُحتسب وقت التأخير ضمن مدة الحجز المحددة ولا يتم تمديدها.</li>
+          <li>يجب إبلاغ مسؤول الصوت قبل نصف ساعة من نهاية الوقت المحدد لإيقاف البث تمهيداً لعملية التنظيف.</li>
+          <li>يلتزم الحاجز بالمحافظة على الموقع من أي تخريب أو إتلاف للممتلكات.</li>
+          <li>يُمنع منعاً باتاً استخدام الألعاب النارية داخل الموقع.</li>
+        </ol>
+        <label style="display:flex; align-items:flex-start; gap:8px; font-weight:600; margin-top:10px; cursor:pointer;">
+          <input type="checkbox" id="agreeTerms" style="margin-top:3px; width:auto;" onchange="document.getElementById('downloadBtn').disabled=!this.checked;">
+          أقر أنا الموقّع أدناه بأنني اطّلعت على الشروط أعلاه وألتزم بها بالكامل.
+        </label>
+      </div>
+      <div class="actions" style="justify-content:center; flex-wrap:wrap;">
+        <button id="downloadBtn" class="btn btn-primary" disabled onclick="downloadPdf()">تحميل تعهد الحجز PDF ⬇</button>
+        <button class="btn btn-ghost" onclick="newBooking()">إجراء حجز آخر</button>
+      </div>
     </div>`;
+}
+async function downloadPdf(){
+  const b = state.lastBooking;
+  const tpl = document.getElementById('pdfTemplate');
+  tpl.innerHTML = `
+    <div style="text-align:center; border-bottom:3px solid #1B3A5C; padding-bottom:16px; margin-bottom:20px;">
+      <img src="logo.png.jpg" style="width:70px;height:70px;border-radius:50%;margin-bottom:8px;">
+      <h1 style="font-family:'Aref Ruqaa',serif; color:#1B3A5C; margin:0; font-size:28px;">مدينة أور السياحية</h1>
+      <div style="font-size:13px; color:#555;">تعهد وإيصال حجز موعد الزيارة</div>
+    </div>
+    <table style="width:100%; border-collapse:collapse; font-size:14px; margin-bottom:20px;">
+      <tr><td style="padding:6px 0; font-weight:700; width:150px;">رقم الحجز:</td><td style="padding:6px 0;">${esc(b.ref)}</td></tr>
+      <tr><td style="padding:6px 0; font-weight:700;">الاسم الكامل:</td><td style="padding:6px 0;">${esc(b.name)}</td></tr>
+      <tr><td style="padding:6px 0; font-weight:700;">التاريخ:</td><td style="padding:6px 0;">${fmtDate(b.date)}</td></tr>
+      <tr><td style="padding:6px 0; font-weight:700;">الوقت:</td><td style="padding:6px 0;">${b.time}</td></tr>
+      <tr><td style="padding:6px 0; font-weight:700;">الجامعة:</td><td style="padding:6px 0;">${esc(b.university)}</td></tr>
+      <tr><td style="padding:6px 0; font-weight:700;">الكلية:</td><td style="padding:6px 0;">${esc(b.college)}</td></tr>
+      <tr><td style="padding:6px 0; font-weight:700;">القسم:</td><td style="padding:6px 0;">${esc(b.department)}</td></tr>
+    </table>
+    <h3 style="color:#1B3A5C; border-bottom:1.5px solid #E3D3AE; padding-bottom:6px;">التعهد بالالتزام بالشروط والقوانين</h3>
+    <ol style="padding-right:22px; line-height:2.1; font-size:13.5px;">
+      <li>مدة الحجز محددة بساعتين (2) فقط من الوقت المحدد للحجز.</li>
+      <li>الإدارة غير مسؤولة عن أي تأخير في بدء الفعالية، ويُحتسب وقت التأخير ضمن مدة الحجز المحددة ولا يتم تمديدها.</li>
+      <li>يجب إبلاغ مسؤول الصوت قبل نصف ساعة من نهاية الوقت المحدد لإيقاف البث الصوتي تمهيداً لعملية التنظيف.</li>
+      <li>يلتزم الحاجز بالمحافظة على الموقع من أي تخريب أو إتلاف للممتلكات.</li>
+      <li>يُمنع منعاً باتاً استخدام الألعاب النارية داخل الموقع.</li>
+    </ol>
+    <p style="font-size:13.5px; margin-top:16px;">أقر أنا الموقّع أدناه، <b>${esc(b.name)}</b>، بأنني اطّلعت على الشروط أعلاه وألتزم بها بالكامل، وأتحمل المسؤولية الكاملة عن أي مخالفة لها.</p>
+    <div style="display:flex; justify-content:space-between; margin-top:60px; font-size:13.5px;">
+      <div style="text-align:center; width:45%;"><div style="border-top:1px solid #2B2420; padding-top:6px;">توقيع الحاجز</div></div>
+      <div style="text-align:center; width:45%;"><div style="border-top:1px solid #2B2420; padding-top:6px;">تاريخ التوقيع</div></div>
+    </div>`;
+  tpl.style.top='0px'; tpl.style.left='0px';
+  const logoImg = tpl.querySelector('img');
+  await new Promise(resolve=>{
+    if(logoImg && !logoImg.complete){ logoImg.onload=resolve; logoImg.onerror=resolve; setTimeout(resolve,1500); }
+    else setTimeout(resolve,50);
+  });
+  try{
+    const canvas = await html2canvas(tpl, { scale:2, backgroundColor:'#ffffff' });
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('p','mm','a4');
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const imgWidth = pageWidth - 20;
+    const imgHeight = canvas.height * imgWidth / canvas.width;
+    pdf.addImage(imgData, 'JPEG', 10, 10, imgWidth, imgHeight);
+    pdf.save('تعهد-حجز-'+b.ref+'.pdf');
+  }catch(e){ alert('تعذّر إنشاء ملف PDF، حاول مجدداً.'); }
+  tpl.style.top='-9999px'; tpl.style.left='-9999px';
 }
 async function newBooking(){
   state.step=1; state.selectedSlot=null; state.images={front:null,back:null,letter:null};
