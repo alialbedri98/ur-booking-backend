@@ -302,4 +302,274 @@ function renderStep2(){
           <img class="thumb" id="thumb_back"><div class="up-status" id="status_back">✓ تم إرفاق الصورة</div></div>
         <div class="upload-box"><div class="up-title">3. كتاب طلب الجامعة معنون إلى مدينة أور السياحية</div>
           <input type="file" accept="image/*" onchange="handleUpload(event,'letter')">
-          <img class="thumb" id="thumb_letter"><div class
+          <img class="thumb" id="thumb_letter"><div class="up-status" id="status_letter">✓ تم إرفاق الصورة</div></div>
+        <div id="formErr"></div>
+        <div class="actions">
+          <button type="button" class="btn btn-ghost" onclick="backToStep1()">→ رجوع</button>
+          <button type="submit" class="btn btn-primary">تأكيد الحجز</button>
+        </div>
+      </form>
+    </div>`;
+  document.getElementById('bookForm').addEventListener('submit', submitBooking);
+}
+async function handleUpload(ev, key){
+  const file = ev.target.files[0]; if(!file) return;
+  try{
+    const dataUrl = await compressImage(file);
+    state.images[key] = dataUrl;
+    document.getElementById('thumb_'+key).src = dataUrl;
+    document.getElementById('thumb_'+key).style.display='block';
+    document.getElementById('status_'+key).style.display='block';
+  }catch(err){ alert(err); }
+}
+function backToStep1(){ state.step=1; render(); }
+async function submitBooking(ev){
+  ev.preventDefault();
+  const errBox = document.getElementById('formErr'); errBox.innerHTML='';
+  const name = document.getElementById('f_name').value.trim();
+  const phone = document.getElementById('f_phone').value.trim();
+  const uni = document.getElementById('f_uni').value.trim();
+  const college = document.getElementById('f_college').value.trim();
+  const dept = document.getElementById('f_dept').value.trim();
+  if(!name||!phone||!uni||!college||!dept){ errBox.innerHTML = `<div class="msg msg-err">يرجى تعبئة جميع الحقول.</div>`; return; }
+  if(!state.images.front || !state.images.back || !state.images.letter){
+    errBox.innerHTML = `<div class="msg msg-err">يرجى إرفاق الصور الثلاث المطلوبة.</div>`; return;
+  }
+  errBox.innerHTML = `<div class="msg msg-ok">جارٍ حفظ الحجز...</div>`;
+  const slot = state.slots.find(s=>s.id===state.selectedSlot);
+  try{
+    const result = await api('/api/bookings', { method:'POST', body: JSON.stringify({
+      slotId: state.selectedSlot, name, phone, university:uni, college, department:dept,
+      idFront: state.images.front, idBack: state.images.back, letter: state.images.letter
+    })});
+    state.lastBooking = { ref: result.ref, name, date: slot.date, time: slot.time, university:uni, college, department:dept };
+    state.step = 3; render();
+  }catch(e){
+    errBox.innerHTML = `<div class="msg msg-err">${esc(e.message)}</div>`;
+    if(e.message.includes('حجز هذا الموعد')){
+      state.slots = await api('/api/slots/calendar').catch(()=>state.slots);
+      setTimeout(()=>{ state.selectedSlot=null; state.selectedDate=null; state.step=1; render(); }, 1800);
+    }
+  }
+}
+function renderConfirm(){
+  const b = state.lastBooking;
+  app.innerHTML = `${stepperHtml(3)}
+    <div class="panel confirm-card">
+      <h2>تم تأكيد حجزكم بنجاح ✓</h2>
+      <p>يرجى الاحتفاظ برقم الحجز التالي وإبرازه عند الحضور:</p>
+      <div class="ref num">${b.ref}</div>
+      <div class="summary-box" style="text-align:right;">
+        <div><b>الاسم:</b> ${esc(b.name)}</div>
+        <div><b>الموعد:</b> ${fmtDate(b.date)} — الساعة <span class="num">${b.time}</span></div>
+        <div><b>الجامعة / الكلية / القسم:</b> ${esc(b.university)} / ${esc(b.college)} / ${esc(b.department)}</div>
+      </div>
+      <div class="summary-box" style="text-align:right;">
+        <h3 style="margin-top:0;">التعهد بالالتزام بالشروط والقوانين</h3>
+        <ol style="padding-right:20px; line-height:2; font-size:13.5px;">
+          <li>مدة الحجز محددة بساعتين (2) فقط من الوقت المحدد.</li>
+          <li>الإدارة غير مسؤولة عن أي تأخير في بدء الفعالية، ويُحتسب وقت التأخير ضمن مدة الحجز المحددة ولا يتم تمديدها.</li>
+          <li>يجب إبلاغ مسؤول الصوت قبل نصف ساعة من نهاية الوقت المحدد لإيقاف البث تمهيداً لعملية التنظيف.</li>
+          <li>يلتزم الحاجز بالمحافظة على الموقع من أي تخريب أو إتلاف للممتلكات.</li>
+          <li>يُمنع منعاً باتاً استخدام الألعاب النارية داخل الموقع.</li>
+        </ol>
+        <label style="display:flex; align-items:flex-start; gap:8px; font-weight:600; margin-top:10px; cursor:pointer;">
+          <input type="checkbox" id="agreeTerms" style="margin-top:3px; width:auto;" onchange="document.getElementById('downloadBtn').disabled=!this.checked;">
+          أقر أنا الموقّع أدناه بأنني اطّلعت على الشروط أعلاه وألتزم بها بالكامل.
+        </label>
+      </div>
+      <div class="actions" style="justify-content:center; flex-wrap:wrap;">
+        <button id="downloadBtn" class="btn btn-primary" disabled onclick="downloadPdf()">تحميل تعهد الحجز PDF ⬇</button>
+        <button class="btn btn-ghost" onclick="newBooking()">إجراء حجز آخر</button>
+      </div>
+    </div>`;
+}
+async function downloadPdf(){
+  const b = state.lastBooking;
+  const tpl = document.getElementById('pdfTemplate');
+  tpl.innerHTML = `
+    <div style="text-align:center; border-bottom:3px solid #1B3A5C; padding-bottom:16px; margin-bottom:20px;">
+      <img src="logo.png.jpg" style="width:70px;height:70px;border-radius:50%;margin-bottom:8px;">
+      <h1 style="font-family:'Aref Ruqaa',serif; color:#1B3A5C; margin:0; font-size:28px;">مدينة أور السياحية</h1>
+      <div style="font-size:13px; color:#555;">تعهد وإيصال حجز موعد الزيارة</div>
+    </div>
+    <table style="width:100%; border-collapse:collapse; font-size:14px; margin-bottom:20px;">
+      <tr><td style="padding:6px 0; font-weight:700; width:150px;">رقم الحجز:</td><td style="padding:6px 0;">${esc(b.ref)}</td></tr>
+      <tr><td style="padding:6px 0; font-weight:700;">الاسم الكامل:</td><td style="padding:6px 0;">${esc(b.name)}</td></tr>
+      <tr><td style="padding:6px 0; font-weight:700;">التاريخ:</td><td style="padding:6px 0;">${fmtDate(b.date)}</td></tr>
+      <tr><td style="padding:6px 0; font-weight:700;">الوقت:</td><td style="padding:6px 0;">${b.time}</td></tr>
+      <tr><td style="padding:6px 0; font-weight:700;">الجامعة:</td><td style="padding:6px 0;">${esc(b.university)}</td></tr>
+      <tr><td style="padding:6px 0; font-weight:700;">الكلية:</td><td style="padding:6px 0;">${esc(b.college)}</td></tr>
+      <tr><td style="padding:6px 0; font-weight:700;">القسم:</td><td style="padding:6px 0;">${esc(b.department)}</td></tr>
+    </table>
+    <h3 style="color:#1B3A5C; border-bottom:1.5px solid #E3D3AE; padding-bottom:6px;">التعهد بالالتزام بالشروط والقوانين</h3>
+    <ol style="padding-right:22px; line-height:2.1; font-size:13.5px;">
+      <li>مدة الحجز محددة بساعتين (2) فقط من الوقت المحدد للحجز.</li>
+      <li>الإدارة غير مسؤولة عن أي تأخير في بدء الفعالية، ويُحتسب وقت التأخير ضمن مدة الحجز المحددة ولا يتم تمديدها.</li>
+      <li>يجب إبلاغ مسؤول الصوت قبل نصف ساعة من نهاية الوقت المحدد لإيقاف البث الصوتي تمهيداً لعملية التنظيف.</li>
+      <li>يلتزم الحاجز بالمحافظة على الموقع من أي تخريب أو إتلاف للممتلكات.</li>
+      <li>يُمنع منعاً باتاً استخدام الألعاب النارية داخل الموقع.</li>
+    </ol>
+    <p style="font-size:13.5px; margin-top:16px;">أقر أنا الموقّع أدناه، <b>${esc(b.name)}</b>، بأنني اطّلعت على الشروط أعلاه وألتزم بها بالكامل، وأتحمل المسؤولية الكاملة عن أي مخالفة لها.</p>
+    <div style="display:flex; justify-content:space-between; margin-top:60px; font-size:13.5px;">
+      <div style="text-align:center; width:45%;"><div style="border-top:1px solid #2B2420; padding-top:6px;">توقيع الحاجز</div></div>
+      <div style="text-align:center; width:45%;"><div style="border-top:1px solid #2B2420; padding-top:6px;">تاريخ التوقيع</div></div>
+    </div>`;
+  tpl.style.top='0px'; tpl.style.left='0px';
+  const logoImg = tpl.querySelector('img');
+  await new Promise(resolve=>{
+    if(logoImg && !logoImg.complete){ logoImg.onload=resolve; logoImg.onerror=resolve; setTimeout(resolve,1500); }
+    else setTimeout(resolve,50);
+  });
+  try{
+    const canvas = await html2canvas(tpl, { scale:2, backgroundColor:'#ffffff' });
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('p','mm','a4');
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const imgWidth = pageWidth - 20;
+    const imgHeight = canvas.height * imgWidth / canvas.width;
+    pdf.addImage(imgData, 'JPEG', 10, 10, imgWidth, imgHeight);
+    pdf.save('تعهد-حجز-'+b.ref+'.pdf');
+  }catch(e){ alert('تعذّر إنشاء ملف PDF، حاول مجدداً.'); }
+  tpl.style.top='-9999px'; tpl.style.left='-9999px';
+}
+async function newBooking(){
+  state.step=1; state.selectedSlot=null; state.selectedDate=null; state.images={front:null,back:null,letter:null};
+  state.slots = await api('/api/slots/calendar').catch(()=>state.slots);
+  render();
+}
+
+/* ================= ADMIN ================= */
+function renderAdminLogin(){
+  app.innerHTML = `<div class="panel" style="max-width:380px;margin:0 auto;">
+      <h2>دخول الإدارة</h2><div class="sub">لوحة تحكم دائرة مدينة أور السياحية</div>
+      <div id="loginErr"></div>
+      <label>اسم المستخدم</label><input type="text" id="a_user">
+      <label>كلمة المرور</label><input type="password" id="a_pass">
+      <div class="actions">
+        <button class="btn btn-ghost" onclick="state.view='booking'; render();">إلغاء</button>
+        <button class="btn btn-primary" onclick="doLogin()">دخول</button>
+      </div></div>`;
+}
+async function doLogin(){
+  const u = document.getElementById('a_user').value.trim();
+  const p = document.getElementById('a_pass').value;
+  try{
+    const r = await api('/api/admin/login', { method:'POST', body: JSON.stringify({ username:u, password:p }) });
+    state.token = r.token; state.view='admin-panel';
+    state.adminSlots = await api('/api/admin/slots');
+    render();
+  }catch(e){
+    document.getElementById('loginErr').innerHTML = `<div class="msg msg-err">${esc(e.message)}</div>`;
+  }
+}
+let newSlotTimes = [];
+function renderAdminPanel(){
+  const today = new Date().toISOString().slice(0,10);
+  const byDate = {};
+  (state.adminSlots||[]).forEach(s=>{ (byDate[s.date]=byDate[s.date]||[]).push(s); });
+  const dates = Object.keys(byDate).sort();
+  let rows = '';
+  dates.forEach(d=>{
+    byDate[d].sort((a,b)=>a.time.localeCompare(b.time)).forEach(s=>{
+      const taken = !!s.booking_id;
+      rows += `<tr>
+        <td>${fmtDate(d)}</td><td class="num">${s.time}</td>
+        <td>${taken? `<span class="status-tag status-taken">محجوز</span>` : `<span class="status-tag status-free">متاح</span>`}</td>
+        <td>${taken? esc(s.name) : '—'}</td>
+        <td>${taken? `<button class="link-btn" onclick="viewBooking(${s.id})">عرض التفاصيل</button>` : ''}
+            <button class="link-btn" style="color:#A3402E" onclick="deleteSlot(${s.id})">حذف</button></td>
+      </tr>`;
+    });
+  });
+  if(dates.length===0) rows = `<tr><td colspan="5" class="empty-note">لا توجد مواعيد مضافة بعد.</td></tr>`;
+  app.innerHTML = `<div class="panel">
+      <div class="admin-header">
+        <h2 style="margin:0;">لوحة تحكم الإدارة <span class="badge">مدينة أور</span></h2>
+        <div><button class="link-btn" onclick="changePassPrompt()">تغيير كلمة المرور</button>
+          <button class="btn btn-ghost" style="padding:8px 16px;font-size:13px;margin-right:8px;" onclick="adminLogout()">تسجيل الخروج</button></div>
+      </div>
+      <h3 style="margin-bottom:6px;">إضافة مواعيد جديدة</h3>
+      <div class="grid2">
+        <div><label>التاريخ</label><input type="date" id="ns_date" min="${today}"></div>
+        <div><label>الوقت</label><input type="time" id="ns_time"></div>
+      </div>
+      <button class="btn btn-ghost" type="button" onclick="addTimeChip()">+ إضافة وقت للقائمة</button>
+      <div style="margin:12px 0;" id="chips">${renderChips()}</div>
+      <button class="btn btn-primary" onclick="saveNewSlots()">حفظ المواعيد</button>
+      <hr style="border:none;border-top:1px solid var(--line);margin:26px 0;">
+      <h3>قائمة المواعيد والحجوزات</h3>
+      <div style="overflow-x:auto;"><table>
+        <thead><tr><th>التاريخ</th><th>الوقت</th><th>الحالة</th><th>الحاجز</th><th>إجراءات</th></tr></thead>
+        <tbody>${rows}</tbody></table></div>
+    </div><div id="modalHost"></div>`;
+}
+function renderChips(){
+  if(newSlotTimes.length===0) return `<span class="sub">لم تُضف أوقات بعد.</span>`;
+  return newSlotTimes.map((t,i)=>`<span class="chip num">${t}<button onclick="removeChip(${i})">×</button></span>`).join('');
+}
+function addTimeChip(){
+  const t = document.getElementById('ns_time').value;
+  if(!t){ alert('يرجى اختيار الوقت أولاً'); return; }
+  if(!newSlotTimes.includes(t)) newSlotTimes.push(t);
+  document.getElementById('chips').innerHTML = renderChips();
+}
+function removeChip(i){ newSlotTimes.splice(i,1); document.getElementById('chips').innerHTML = renderChips(); }
+async function saveNewSlots(){
+  const date = document.getElementById('ns_date').value;
+  if(!date || newSlotTimes.length===0){ alert('يرجى اختيار التاريخ وإضافة وقت واحد على الأقل'); return; }
+  try{
+    await api('/api/admin/slots', { method:'POST', body: JSON.stringify({ date, times:newSlotTimes }) });
+    newSlotTimes = [];
+    state.adminSlots = await api('/api/admin/slots');
+    renderAdminPanel();
+  }catch(e){ alert(e.message); }
+}
+async function deleteSlot(id){
+  if(!confirm('هل تريد حذف هذا الموعد؟ (سيُلغى الحجز المرتبط به إن وجد)')) return;
+  try{ await api('/api/admin/slots/'+id, { method:'DELETE' });
+    state.adminSlots = await api('/api/admin/slots'); renderAdminPanel();
+  }catch(e){ alert(e.message); }
+}
+async function viewBooking(slotId){
+  document.getElementById('modalHost').innerHTML = `<div class="modal-bg" onclick="if(event.target===this) closeModal()">
+      <div class="modal"><button class="close-x" onclick="closeModal()">×</button>
+      <p class="empty-note">جارٍ تحميل التفاصيل...</p></div></div>`;
+  try{
+    const b = await api('/api/admin/bookings/'+slotId);
+    document.getElementById('modalHost').innerHTML = `<div class="modal-bg" onclick="if(event.target===this) closeModal()">
+      <div class="modal"><button class="close-x" onclick="closeModal()">×</button>
+        <h3>تفاصيل الحجز — <span class="num">${esc(b.ref)}</span></h3>
+        <div class="summary-box">
+          <div><b>الاسم:</b> ${esc(b.name)}</div><div><b>الهاتف:</b> ${esc(b.phone)}</div>
+          <div><b>الجامعة:</b> ${esc(b.university)}</div><div><b>الكلية:</b> ${esc(b.college)}</div>
+          <div><b>القسم:</b> ${esc(b.department)}</div>
+        </div>
+        <div><b>البطاقة الوطنية - الوجه الأمامي</b></div><img src="${b.id_front}">
+        <div><b>البطاقة الوطنية - الوجه الخلفي</b></div><img src="${b.id_back}">
+        <div><b>كتاب طلب الجامعة</b></div><img src="${b.letter}">
+        <button class="btn btn-danger" onclick="cancelBooking(${slotId})">إلغاء هذا الحجز</button>
+      </div></div>`;
+  }catch(e){ document.getElementById('modalHost').innerHTML = `<div class="modal-bg"><div class="modal"><button class="close-x" onclick="closeModal()">×</button><p>${esc(e.message)}</p></div></div>`; }
+}
+function closeModal(){ document.getElementById('modalHost').innerHTML=''; }
+async function cancelBooking(slotId){
+  if(!confirm('هل تريد إلغاء هذا الحجز وإعادة فتح الموعد؟')) return;
+  try{ await api('/api/admin/bookings/'+slotId, { method:'DELETE' });
+    closeModal(); state.adminSlots = await api('/api/admin/slots'); renderAdminPanel();
+  }catch(e){ alert(e.message); }
+}
+async function changePassPrompt(){
+  const oldPassword = prompt('أدخل كلمة المرور الحالية:'); if(oldPassword===null) return;
+  const newPassword = prompt('أدخل كلمة المرور الجديدة (6 أحرف على الأقل):'); if(newPassword===null) return;
+  try{ await api('/api/admin/change-password', { method:'POST', body: JSON.stringify({ oldPassword, newPassword }) });
+    alert('تم تغيير كلمة المرور بنجاح');
+  }catch(e){ alert(e.message); }
+}
+function adminLogout(){ state.token=null; state.view='booking'; state.step=1; render(); }
+
+init();
+</script>
+</body>
+</html>
