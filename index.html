@@ -40,6 +40,274 @@
   .date-group{margin-bottom:22px;}
   .date-group h3{font-family:'IBM Plex Sans Arabic'; font-size:14px; font-weight:600; color:var(--lapis-deep); border-bottom:2px solid var(--sand-deep); padding-bottom:8px; margin-bottom:12px; display:flex; align-items:center; gap:8px;}
   .date-group h3::before{content:"◆"; color:var(--clay); font-size:10px;}
+  .cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .cal-head button{background:var(--sand-deep);border:none;width:34px;height:34px;border-radius:50%;font-size:16px;cursor:pointer;color:var(--lapis-deep);}
+  .cal-title{font-family:'IBM Plex Sans Arabic';font-weight:700;font-size:16px;color:var(--lapis-deep);}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:6px;}
+  .cal-dow{text-align:center;font-size:11.5px;font-weight:700;color:var(--ink);opacity:.55;padding-bottom:4px;}
+  .cal-day{position:relative;aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:6px;font-family:'IBM Plex Sans Arabic';font-size:14px;font-weight:600;cursor:pointer;background:#fff;border:1.5px solid var(--line);color:var(--ink);}
+  .cal-day.empty{visibility:hidden;}
+  .cal-day.no-slots{opacity:.3;cursor:not-allowed;background:transparent;border-color:transparent;}
+  .cal-day.has-slots::after{content:"";position:absolute;bottom:5px;width:5px;height:5px;border-radius:50%;background:var(--olive);}
+  .cal-day.has-slots:hover{border-color:var(--clay);}
+  .cal-day.selected{background:var(--clay);color:#fff;border-color:var(--clay-deep);}
+  .cal-day.selected::after{background:#fff;}
+  .cal-day.today{box-shadow:inset 0 0 0 2px var(--gold);}
+  .legend{display:flex;gap:16px;justify-content:center;margin:14px 0 20px;font-size:12px;flex-wrap:wrap;}
+  .legend span{display:flex;align-items:center;gap:5px;}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block;}
+  .dot.free{background:var(--olive);}
+  .dot.gray{background:#bbb;}
+  .times-title{font-family:'IBM Plex Sans Arabic';font-size:14px;font-weight:700;color:var(--lapis-deep);border-bottom:2px solid var(--sand-deep);padding-bottom:8px;margin:18px 0 12px;}
+  .slot-btn.taken{background:#eee;color:#999;border-color:#ddd;cursor:not-allowed;text-decoration:line-through;}
+  .slot-btn.taken:hover{background:#eee;color:#999;}
+  .taken-badge{display:block;font-size:10px;text-decoration:none;margin-top:2px;font-weight:700;color:var(--danger);}
+  .slot-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:10px;}
+  .slot-btn{font-family:'IBM Plex Sans Arabic'; font-size:15px; font-weight:600; padding:12px 8px; border-radius:5px; border:1.5px solid var(--clay); background:#fff; color:var(--clay-deep); cursor:pointer; transition:all .15s;}
+  .slot-btn:hover{background:var(--clay); color:#fff;}
+  .slot-btn.selected{background:var(--clay); color:#fff; box-shadow:0 0 0 3px rgba(193,101,47,0.25);}
+  .empty-note{color:var(--ink); opacity:.6; font-size:14px; padding:10px 0;}
+  label{display:block; font-size:13.5px; font-weight:600; margin-bottom:6px; color:var(--ink);}
+  input[type=text],input[type=tel],input[type=date],input[type=time],input[type=password]{width:100%; padding:11px 12px; border:1.5px solid var(--line); border-radius:5px; font-family:'Cairo'; font-size:14.5px; background:#fff; color:var(--ink); margin-bottom:16px;}
+  input:focus{outline:2px solid var(--lapis); outline-offset:1px; border-color:var(--lapis);}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:0 14px;}
+  @media(max-width:560px){.grid2{grid-template-columns:1fr;}}
+  .upload-box{border:1.5px dashed var(--line); border-radius:6px; padding:14px; margin-bottom:16px; background:#fff;}
+  .upload-box .up-title{font-size:13.5px; font-weight:600; margin-bottom:8px;}
+  .thumb{max-width:100%; max-height:140px; border-radius:4px; margin-top:10px; display:none; border:1px solid var(--line);}
+  .up-status{font-size:12px; color:var(--olive); margin-top:6px; display:none; font-weight:600;}
+  .btn{font-family:'Cairo'; font-weight:700; font-size:15px; padding:13px 26px; border-radius:5px; border:none; cursor:pointer;}
+  .btn-primary{background:var(--clay); color:#fff;}
+  .btn-primary:hover{background:var(--clay-deep);}
+  .btn-primary:disabled{opacity:.4; cursor:not-allowed;}
+  .btn-ghost{background:transparent; color:var(--lapis-deep); border:1.5px solid var(--lapis-deep);}
+  .btn-ghost:hover{background:var(--lapis-deep); color:#fff;}
+  .btn-danger{background:var(--danger); color:#fff;}
+  .actions{display:flex; gap:10px; justify-content:space-between; margin-top:10px;}
+  .summary-box{background:var(--sand); border-radius:6px; padding:16px 18px; margin-bottom:18px; font-size:14px; line-height:2;}
+  .confirm-card{text-align:center; padding:40px 24px;}
+  .confirm-card .ref{font-family:'IBM Plex Sans Arabic'; font-size:26px; font-weight:600; color:var(--olive); background:#fff; border:2px dashed var(--olive); display:inline-block; padding:10px 24px; border-radius:6px; margin:14px 0 20px; letter-spacing:1px;}
+  .admin-header{display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px;}
+  .badge{font-size:11px; background:var(--gold); color:#3a2c05; padding:3px 10px; border-radius:12px; font-weight:700;}
+  .chip{display:inline-flex; align-items:center; gap:6px; background:var(--sand-deep); padding:5px 10px; border-radius:14px; font-size:13px; margin:0 4px 8px 0;}
+  .chip button{border:none; background:none; color:var(--danger); cursor:pointer; font-weight:700;}
+  table{width:100%; border-collapse:collapse; font-size:13.5px;}
+  th,td{padding:9px 8px; border-bottom:1px solid var(--line); text-align:right;}
+  th{color:var(--lapis-deep); font-size:12.5px;}
+  .status-tag{font-size:11.5px; font-weight:700; padding:3px 10px; border-radius:10px;}
+  .status-free{background:rgba(107,127,58,0.15); color:var(--olive);}
+  .status-taken{background:rgba(163,64,46,0.13); color:var(--danger);}
+  .link-btn{background:none; border:none; color:var(--lapis); text-decoration:underline; cursor:pointer; font-size:13px; font-family:'Cairo';}
+  .modal-bg{position:fixed; inset:0; background:rgba(27,20,10,0.55); display:flex; align-items:center; justify-content:center; z-index:100; padding:20px;}
+  .modal{background:var(--paper); border-radius:8px; max-width:560px; width:100%; max-height:88vh; overflow:auto; padding:26px;}
+  .modal img{width:100%; border-radius:5px; margin:8px 0; border:1px solid var(--line);}
+  .close-x{float:left; background:none; border:none; font-size:20px; cursor:pointer; color:var(--ink);}
+  .msg{padding:11px 14px; border-radius:5px; font-size:13.5px; margin-bottom:14px; font-weight:600;}
+  .msg-err{background:rgba(163,64,46,0.12); color:var(--danger);}
+  .msg-ok{background:rgba(107,127,58,0.14); color:var(--olive);}
+  footer{text-align:center; padding:26px; font-size:12.5px; color:var(--ink); opacity:.5;}
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="site-inner">
+    <img src="logo.png.jpg" alt="شعار مدينة أور السياحية" style="width:86px;height:86px;border-radius:50%;margin-bottom:10px;box-shadow:0 2px 10px rgba(0,0,0,0.25);">
+    <div class="eyebrow">دائرة رسمية</div>
+    <h1>مدينة أور السياحية</h1>
+    <p>نظام حجز مواعيد الزيارة الرسمية للوفود الجامعية</p>
+  </div>
+</header>
+<main id="app"></main>
+<button class="admin-link" onclick="goAdmin()">دخول الإدارة</button>
+<footer>مدينة أور السياحية — نظام حجز المواعيد الإلكتروني</footer>
+<div id="pdfTemplate" style="position:fixed; top:-9999px; left:-9999px; width:750px; background:#fff; padding:40px; font-family:'Cairo',sans-serif; color:#2B2420; direction:rtl; z-index:-1;"></div>
+
+<script>
+// ================= CONFIG =================
+// غيّر هذا الرابط إلى رابط سيرفرك الحقيقي بعد النشر (مثال: https://ur-booking-api.onrender.com)
+const API_BASE = 'https://ur-booking-backend-1.onrender.com';
+
+let state = { view:'booking', step:1, slots:[], selectedSlot:null, images:{front:null,back:null,letter:null}, token:null, lastBooking:null };
+const app = document.getElementById('app');
+
+function esc(s){ return (s||'').toString().replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmtDate(d){ const s = String(d).split('T')[0]; const dt = new Date(s+'T00:00:00'); return dt.toLocaleDateString('ar-IQ', { weekday:'long', year:'numeric', month:'long', day:'numeric' }); }
+
+async function api(path, opts={}){
+  const headers = { 'Content-Type':'application/json', ...(opts.headers||{}) };
+  if(state.token) headers['Authorization'] = 'Bearer '+state.token;
+  const res = await fetch(API_BASE+path, { ...opts, headers });
+  const data = await res.json().catch(()=>({}));
+  if(!res.ok) throw new Error(data.error || 'حدث خطأ');
+  return data;
+}
+
+function compressImage(file){
+  return new Promise((resolve,reject)=>{
+    if(!file.type.startsWith('image/')){ reject('يرجى اختيار ملف صورة'); return; }
+    const reader = new FileReader();
+    reader.onload = e =>{
+      const img = new Image();
+      img.onload = ()=>{
+        const maxW = 900;
+        const scale = Math.min(1, maxW/img.width);
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width*scale; canvas.height = img.height*scale;
+        canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', 0.6));
+      };
+      img.onerror = ()=>reject('تعذّرت قراءة الصورة');
+      img.src = e.target.result;
+    };
+    reader.onerror = ()=>reject('تعذّرت قراءة الملف');
+    reader.readAsDataURL(file);
+  });
+}
+
+async function init(){
+  try{ state.slots = await api('/api/slots/calendar'); }
+  catch(e){ state.slots = []; }
+  render();
+}
+function goAdmin(){ state.view = (state.view==='booking') ? 'admin-login' : 'booking'; render(); }
+function render(){
+  if(state.view==='booking') return renderBooking();
+  if(state.view==='admin-login') return renderAdminLogin();
+  if(state.view==='admin-panel') return renderAdminPanel();
+}
+function stepperHtml(current){
+  const labels=['اختيار الموعد','البيانات والمرفقات','التأكيد'];
+  return `<div class="stepper">${labels.map((l,i)=>{
+    const n=i+1; const cls = n<current?'done':(n===current?'active':'');
+    return `<div class="step ${cls}"><div class="step-block num">${n}</div><div class="step-label">${l}</div></div>`;
+  }).join('')}</div>`;
+}
+function renderBooking(){
+  if(state.step===1) return renderStep1();
+  if(state.step===2) return renderStep2();
+  if(state.step===3) return renderConfirm();
+}
+function renderStep1(){
+  if(state.viewYear===undefined){
+    const t = new Date();
+    state.viewYear = t.getFullYear(); state.viewMonth = t.getMonth();
+  }
+  app.innerHTML = `${stepperHtml(1)}
+    <div class="panel">
+      <h2>اختر موعد الزيارة</h2>
+      <div class="sub">اضغط على أي يوم فيه مواعيد متاحة (نقطة خضراء)، ثم اختر الوقت المناسب.</div>
+      <div class="cal-head">
+        <button type="button" onclick="changeMonth(-1)">›</button>
+        <div class="cal-title" id="calTitle"></div>
+        <button type="button" onclick="changeMonth(1)">‹</button>
+      </div>
+      <div class="cal-grid" id="dowRow"></div>
+      <div class="cal-grid" id="calGrid"></div>
+      <div class="legend">
+        <span><span class="dot free"></span> يوجد مواعيد متاحة</span>
+        <span><span class="dot gray"></span> لا توجد مواعيد</span>
+      </div>
+      <div id="timesArea"></div>
+      <div class="actions" style="justify-content:flex-end;">
+        <button class="btn btn-primary" id="nextBtn" ${state.selectedSlot?'':'disabled'} onclick="toStep2()">التالي ←</button>
+      </div>
+    </div>`;
+  renderDow(); renderCalendar();
+  if(state.selectedDate) renderTimesForDate();
+}
+const dowNames = ['أحد','اثنين','ثلاثاء','أربعاء','خميس','جمعة','سبت'];
+function renderDow(){
+  document.getElementById('dowRow').innerHTML = dowNames.map(n=>`<div class="cal-dow">${n}</div>`).join('');
+}
+function datesWithSlots(){
+  const set = new Set();
+  state.slots.forEach(s=>{ if(!s.taken) set.add(s.date); });
+  return set;
+}
+function renderCalendar(){
+  const title = new Date(state.viewYear, state.viewMonth, 1).toLocaleDateString('ar-IQ', { month:'long', year:'numeric' });
+  document.getElementById('calTitle').textContent = title;
+  const firstDay = new Date(state.viewYear, state.viewMonth, 1).getDay();
+  const daysInMonth = new Date(state.viewYear, state.viewMonth+1, 0).getDate();
+  const withSlots = datesWithSlots();
+  const todayStr = new Date().toISOString().slice(0,10);
+  let html = '';
+  for(let i=0;i<firstDay;i++) html += `<div class="cal-day empty"></div>`;
+  for(let day=1; day<=daysInMonth; day++){
+    const dateObj = new Date(state.viewYear, state.viewMonth, day);
+    const yy = dateObj.getFullYear(); const mm = String(dateObj.getMonth()+1).padStart(2,'0'); const dd = String(day).padStart(2,'0');
+    const dateStr = `${yy}-${mm}-${dd}`;
+    const has = withSlots.has(dateStr);
+    const isPast = dateObj < new Date(new Date().setHours(0,0,0,0));
+    const classes = ['cal-day'];
+    if(!has || isPast) classes.push('no-slots'); else classes.push('has-slots');
+    if(dateStr === state.selectedDate) classes.push('selected');
+    if(dateStr === todayStr) classes.push('today');
+    const clickable = has && !isPast;
+    html += `<div class="${classes.join(' ')}" ${clickable?`onclick="pickDate('${dateStr}')"`:''}>${day}</div>`;
+  }
+  document.getElementById('calGrid').innerHTML = html;
+}
+function changeMonth(dir){
+  state.viewMonth += dir;
+  if(state.viewMonth<0){ state.viewMonth=11; state.viewYear--; }
+  if(state.viewMonth>11){ state.viewMonth=0; state.viewYear++; }
+  renderCalendar();
+}
+function pickDate(dateStr){
+  state.selectedDate = dateStr; state.selectedSlot = null;
+  renderCalendar(); renderTimesForDate(); updateNextBtn();
+}
+function renderTimesForDate(){
+  const area = document.getElementById('timesArea');
+  const slots = state.slots.filter(s=>s.date===state.selectedDate).sort((a,b)=>a.time.localeCompare(b.time));
+  const label = fmtDate(state.selectedDate);
+  let body = '';
+  if(slots.length===0){ body = `<p class="empty-note">لا توجد مواعيد بهذا اليوم.</p>`; }
+  else{
+    body = `<div class="slot-grid">` + slots.map(s=>{
+      if(s.taken){
+        return `<button type="button" class="slot-btn taken num" disabled>${s.time}<span class="taken-badge">محجوز</span></button>`;
+      }
+      const sel = state.selectedSlot===s.id ? 'selected' : '';
+      return `<button type="button" class="slot-btn num ${sel}" onclick="pickTime(${s.id})">${s.time}</button>`;
+    }).join('') + `</div>`;
+  }
+  area.innerHTML = `<div class="times-title">مواعيد يوم ${label}</div>${body}`;
+}
+function pickTime(id){ state.selectedSlot = id; renderTimesForDate(); updateNextBtn(); }
+function updateNextBtn(){ const b=document.getElementById('nextBtn'); if(b) b.disabled = !state.selectedSlot; }
+function toStep2(){ state.step=2; render(); }
+function renderStep2(){
+  const slot = state.slots.find(s=>s.id===state.selectedSlot);
+  app.innerHTML = `${stepperHtml(2)}
+    <div class="panel">
+      <h2>بيانات الحجز</h2>
+      <div class="summary-box">الموعد المختار: <b>${fmtDate(slot.date)}</b> — الساعة <b class="num">${slot.time}</b></div>
+      <form id="bookForm">
+        <label>الاسم الكامل</label><input type="text" id="f_name" required>
+        <div class="grid2">
+          <div><label>رقم الهاتف</label><input type="tel" id="f_phone" required></div>
+          <div><label>الجامعة</label><input type="text" id="f_uni" required></div>
+        </div>
+        <div class="grid2">
+          <div><label>الكلية</label><input type="text" id="f_college" required></div>
+          <div><label>القسم</label><input type="text" id="f_dept" required></div>
+        </div>
+        <div class="upload-box"><div class="up-title">1. صورة الواجهة الأمامية للبطاقة الوطنية</div>
+          <input type="file" accept="image/*" onchange="handleUpload(event,'front')">
+          <img class="thumb" id="thumb_front"><div class="up-status" id="status_front">✓ تم إرفاق الصورة</div></div>
+        <div class="upload-box"><div class="up-title">2. صورة الواجهة الخلفية للبطاقة الوطنية</div>
+          <input type="file" accept="image/*" onchange="handleUpload(event,'back')">
+          <img class="thumb" id="thumb_back"><div class="up-status" id="status_back">✓ تم إرفاق الصورة</div></div>
+        <div class="upload-box"><div class="up-title">3. كتاب طلب الجامعة معنون إلى مدينة أور السياحية</div>
+          <input type="file" accept="image/*" onchange="handleUpload(event,'letter')">
+          <img class="thumb" id="thumb_letter"><div class  .panel{background:var(--paper); border:1px solid var(--line); border-radius:6px; padding:26px 24px; margin-bottom:20px;}
+  .panel h2{font-size:26px;margin:0 0 4px;color:var(--lapis-deep);}
+  .panel .sub{font-size:13px;color:var(--ink);opacity:.65;margin-bottom:20px;}
+  .date-group{margin-bottom:22px;}
+  .date-group h3{font-family:'IBM Plex Sans Arabic'; font-size:14px; font-weight:600; color:var(--lapis-deep); border-bottom:2px solid var(--sand-deep); padding-bottom:8px; margin-bottom:12px; display:flex; align-items:center; gap:8px;}
+  .date-group h3::before{content:"◆"; color:var(--clay); font-size:10px;}
   .slot-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:10px;}
   .slot-btn{font-family:'IBM Plex Sans Arabic'; font-size:15px; font-weight:600; padding:12px 8px; border-radius:5px; border:1.5px solid var(--clay); background:#fff; color:var(--clay-deep); cursor:pointer; transition:all .15s;}
   .slot-btn:hover{background:var(--clay); color:#fff;}
