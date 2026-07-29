@@ -100,6 +100,32 @@
   .link-btn{background:none; border:none; color:var(--lapis); text-decoration:underline; cursor:pointer; font-size:13px; font-family:'Cairo';}
   .modal-bg{position:fixed; inset:0; background:rgba(27,20,10,0.55); display:flex; align-items:center; justify-content:center; z-index:100; padding:20px;}
   .modal{background:var(--paper); border-radius:8px; max-width:560px; width:100%; max-height:88vh; overflow:auto; padding:26px;}
+  .a-cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .a-cal-head button{background:var(--sand-deep);border:none;width:32px;height:32px;border-radius:50%;font-size:15px;cursor:pointer;color:var(--lapis-deep);}
+  .a-cal-title{font-weight:700;font-size:15px;color:var(--lapis-deep);font-family:'IBM Plex Sans Arabic';}
+  .a-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+  .a-cal-dow{text-align:center;font-size:11px;font-weight:700;opacity:.55;padding-bottom:4px;}
+  .a-cal-day{position:relative;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;background:#fff;border:1.5px solid var(--line);}
+  .a-cal-day.empty{visibility:hidden;}
+  .a-cal-day.none{opacity:.35;cursor:default;}
+  .a-cal-day.has-open{border-color:var(--olive);}
+  .a-cal-day.has-full{border-color:var(--clay);}
+  .a-dots{display:flex;gap:2px;margin-top:2px;}
+  .a-dot{width:5px;height:5px;border-radius:50%;}
+  .a-dot.open{background:var(--olive);}
+  .a-dot.taken{background:var(--clay);}
+  .a-cal-day.selected{background:var(--lapis);color:#fff;}
+  .a-legend{display:flex;gap:14px;font-size:11.5px;opacity:.75;margin-top:10px;flex-wrap:wrap;}
+  .a-legend span{display:inline-flex;align-items:center;gap:5px;}
+  .a-day-detail{margin-top:16px;border-top:1px dashed var(--line);padding-top:14px;}
+  .a-slot-row{display:flex;justify-content:space-between;align-items:center;padding:9px 4px;border-bottom:1px solid var(--line);font-size:13.5px;}
+  .mode-toggle{display:flex;gap:8px;margin-bottom:16px;background:var(--sand);padding:4px;border-radius:8px;}
+  .mode-toggle button{flex:1;padding:10px;border:none;background:transparent;border-radius:6px;font-family:'Cairo';font-weight:700;font-size:12.5px;color:var(--ink);opacity:.6;cursor:pointer;}
+  .mode-toggle button.active{background:#fff;opacity:1;color:var(--lapis-deep);box-shadow:0 1px 3px rgba(0,0,0,0.08);}
+  #pdfMonthExport{background:#fff;padding:20px;}
+  #pdfMonthExport h3{color:var(--lapis-deep);margin-top:0;}
+  #pdfMonthExport table{width:100%;border-collapse:collapse;font-size:13px;}
+  #pdfMonthExport th,#pdfMonthExport td{border:1px solid #ccc;padding:6px 8px;text-align:right;}
   .modal img{width:100%; border-radius:5px; margin:8px 0; border:1px solid var(--line);}
   .close-x{float:left; background:none; border:none; font-size:20px; cursor:pointer; color:var(--ink);}
   .msg{padding:11px 14px; border-radius:5px; font-size:13.5px; margin-bottom:14px; font-weight:600;}
@@ -132,6 +158,12 @@ const app = document.getElementById('app');
 
 function esc(s){ return (s||'').toString().replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function fmtDate(d){ const s = String(d).split('T')[0]; const dt = new Date(s+'T00:00:00'); return dt.toLocaleDateString('ar-IQ', { weekday:'long', year:'numeric', month:'long', day:'numeric' }); }
+function to12h(t){
+  const [h,m] = t.split(':').map(Number);
+  const period = h < 12 ? 'ص' : 'م';
+  let hh = h % 12; if(hh === 0) hh = 12;
+  return `${hh}:${String(m).padStart(2,'0')} ${period}`;
+}
 
 async function api(path, opts={}){
   const headers = { 'Content-Type':'application/json', ...(opts.headers||{}) };
@@ -273,10 +305,10 @@ function renderTimesForDate(){
   else{
     body = `<div class="slot-grid">` + slots.map(s=>{
       if(s.taken){
-        return `<button type="button" class="slot-btn taken num" disabled>${s.time}<span class="taken-badge">محجوز</span></button>`;
+        return `<button type="button" class="slot-btn taken num" disabled>${to12h(s.time)}<span class="taken-badge">محجوز</span></button>`;
       }
       const sel = state.selectedSlot===s.id ? 'selected' : '';
-      return `<button type="button" class="slot-btn num ${sel}" onclick="pickTime(${s.id})">${s.time}</button>`;
+      return `<button type="button" class="slot-btn num ${sel}" onclick="pickTime(${s.id})">${to12h(s.time)}</button>`;
     }).join('') + `</div>`;
   }
   area.innerHTML = `<div class="times-title">مواعيد يوم ${label}</div>${body}`;
@@ -289,7 +321,7 @@ function renderStep2(){
   app.innerHTML = `${stepperHtml(2)}
     <div class="panel">
       <h2>بيانات الحجز</h2>
-      <div class="summary-box">الموعد المختار: <b>${fmtDate(slot.date)}</b> — الساعة <b class="num">${slot.time}</b></div>
+      <div class="summary-box">الموعد المختار: <b>${fmtDate(slot.date)}</b> — الساعة <b class="num">${to12h(slot.time)}</b></div>
       <form id="bookForm">
         <label>الاسم الكامل</label><input type="text" id="f_name" required>
         <div class="grid2">
@@ -367,7 +399,7 @@ function renderConfirm(){
       <div class="ref num">${b.ref}</div>
       <div class="summary-box" style="text-align:right;">
         <div><b>الاسم:</b> ${esc(b.name)}</div>
-        <div><b>الموعد:</b> ${fmtDate(b.date)} — الساعة <span class="num">${b.time}</span></div>
+        <div><b>الموعد:</b> ${fmtDate(b.date)} — الساعة <span class="num">${to12h(b.time)}</span></div>
         <div><b>الجامعة / الكلية / القسم:</b> ${esc(b.university)} / ${esc(b.college)} / ${esc(b.department)}</div>
       </div>
       <div class="summary-box" style="text-align:right;">
@@ -403,7 +435,7 @@ async function downloadPdf(){
       <tr><td style="padding:6px 0; font-weight:700; width:150px;">رقم الحجز:</td><td style="padding:6px 0;">${esc(b.ref)}</td></tr>
       <tr><td style="padding:6px 0; font-weight:700;">الاسم الكامل:</td><td style="padding:6px 0;">${esc(b.name)}</td></tr>
       <tr><td style="padding:6px 0; font-weight:700;">التاريخ:</td><td style="padding:6px 0;">${fmtDate(b.date)}</td></tr>
-      <tr><td style="padding:6px 0; font-weight:700;">الوقت:</td><td style="padding:6px 0;">${b.time}</td></tr>
+      <tr><td style="padding:6px 0; font-weight:700;">الوقت:</td><td style="padding:6px 0;">${to12h(b.time)}</td></tr>
       <tr><td style="padding:6px 0; font-weight:700;">الجامعة:</td><td style="padding:6px 0;">${esc(b.university)}</td></tr>
       <tr><td style="padding:6px 0; font-weight:700;">الكلية:</td><td style="padding:6px 0;">${esc(b.college)}</td></tr>
       <tr><td style="padding:6px 0; font-weight:700;">القسم:</td><td style="padding:6px 0;">${esc(b.department)}</td></tr>
@@ -470,60 +502,127 @@ async function doLogin(){
     document.getElementById('loginErr').innerHTML = `<div class="msg msg-err">${esc(e.message)}</div>`;
   }
 }
-let newSlotTimes = [];
+let newSlotTimes = [];   // used in "عدة أوقات لتاريخ واحد" mode
+let newSlotDates = [];   // used in "وقت واحد لعدة تواريخ" mode
+let addMode = 'multiDate'; // default mode
+let adminViewYear, adminViewMonth, adminSelectedDate = null;
+
 function renderAdminPanel(){
   const today = new Date().toISOString().slice(0,10);
-  const byDate = {};
-  (state.adminSlots||[]).forEach(s=>{ (byDate[s.date]=byDate[s.date]||[]).push(s); });
-  const dates = Object.keys(byDate).sort();
-  let rows = '';
-  dates.forEach(d=>{
-    byDate[d].sort((a,b)=>a.time.localeCompare(b.time)).forEach(s=>{
-      const taken = !!s.booking_id;
-      rows += `<tr>
-        <td>${fmtDate(d)}</td><td class="num">${s.time}</td>
-        <td>${taken? `<span class="status-tag status-taken">محجوز</span>` : `<span class="status-tag status-free">متاح</span>`}</td>
-        <td>${taken? esc(s.name) : '—'}</td>
-        <td>${taken? `<button class="link-btn" onclick="viewBooking(${s.id})">عرض التفاصيل</button>` : ''}
-            <button class="link-btn" style="color:#A3402E" onclick="deleteSlot(${s.id})">حذف</button></td>
-      </tr>`;
-    });
-  });
-  if(dates.length===0) rows = `<tr><td colspan="5" class="empty-note">لا توجد مواعيد مضافة بعد.</td></tr>`;
+  const now = new Date();
+  if(adminViewYear === undefined){ adminViewYear = now.getFullYear(); adminViewMonth = now.getMonth(); }
+
   app.innerHTML = `<div class="panel">
       <div class="admin-header">
         <h2 style="margin:0;">لوحة تحكم الإدارة <span class="badge">مدينة أور</span></h2>
         <div><button class="link-btn" onclick="changePassPrompt()">تغيير كلمة المرور</button>
           <button class="btn btn-ghost" style="padding:8px 16px;font-size:13px;margin-right:8px;" onclick="adminLogout()">تسجيل الخروج</button></div>
       </div>
+
       <h3 style="margin-bottom:6px;">إضافة مواعيد جديدة</h3>
-      <div class="grid2">
-        <div><label>التاريخ</label><input type="date" id="ns_date" min="${today}"></div>
-        <div><label>الوقت</label><input type="time" id="ns_time"></div>
+      <div class="sub">اختار الطريقة المناسبة: وقت واحد بعدة تواريخ، أو عدة أوقات بتاريخ واحد</div>
+      <div class="mode-toggle">
+        <button id="modeBtnMulti" class="${addMode==='multiDate'?'active':''}" onclick="setAddMode('multiDate')">وقت واحد ⟶ عدة تواريخ</button>
+        <button id="modeBtnSingle" class="${addMode==='multiTime'?'active':''}" onclick="setAddMode('multiTime')">عدة أوقات ⟶ تاريخ واحد</button>
       </div>
-      <button class="btn btn-ghost" type="button" onclick="addTimeChip()">+ إضافة وقت للقائمة</button>
-      <div style="margin:12px 0;" id="chips">${renderChips()}</div>
-      <button class="btn btn-primary" onclick="saveNewSlots()">حفظ المواعيد</button>
+
+      <div id="addModeArea"></div>
+
       <hr style="border:none;border-top:1px solid var(--line);margin:26px 0;">
-      <h3>قائمة المواعيد والحجوزات</h3>
-      <div style="overflow-x:auto;"><table>
-        <thead><tr><th>التاريخ</th><th>الوقت</th><th>الحالة</th><th>الحاجز</th><th>إجراءات</th></tr></thead>
-        <tbody>${rows}</tbody></table></div>
+
+      <h3>تقويم المواعيد والحجوزات</h3>
+      <div class="sub">اضغط أي يوم فيه نقطة لعرض تفاصيله، أو نزّل تقرير الشهر بـ PDF</div>
+      <div class="a-cal-head">
+        <button onclick="changeAdminMonth(-1)">›</button>
+        <div class="a-cal-title" id="aCalTitle"></div>
+        <button onclick="changeAdminMonth(1)">‹</button>
+      </div>
+      <div class="a-cal-grid" id="aDowRow"></div>
+      <div class="a-cal-grid" id="aCalGrid"></div>
+      <div class="a-legend">
+        <span><span class="a-dot open"></span> يوجد وقت متاح</span>
+        <span><span class="a-dot taken"></span> محجوز بالكامل</span>
+      </div>
+      <div class="a-day-detail" id="aDayDetail"></div>
+      <div style="margin-top:16px;text-align:left;">
+        <button class="btn btn-ghost btn-sm" onclick="exportAdminMonthPdf()">⬇ تحميل PDF لحجوزات هذا الشهر</button>
+      </div>
     </div><div id="modalHost"></div>`;
+
+  renderAddModeArea(today);
+  renderAdminCalendar();
+}
+
+/* ---------- flexible add-slots form ---------- */
+function setAddMode(mode){
+  addMode = mode;
+  newSlotTimes = []; newSlotDates = [];
+  document.getElementById('modeBtnMulti').classList.toggle('active', mode==='multiDate');
+  document.getElementById('modeBtnSingle').classList.toggle('active', mode==='multiTime');
+  renderAddModeArea(new Date().toISOString().slice(0,10));
+}
+function renderAddModeArea(today){
+  const el = document.getElementById('addModeArea');
+  if(!el) return;
+  if(addMode === 'multiDate'){
+    el.innerHTML = `
+      <label>الوقت (يُطبَّق على كل التواريخ اللي تضيفها)</label>
+      <input type="time" id="md_time" value="09:00">
+      <label>أضف تاريخ للقائمة</label>
+      <div class="grid2">
+        <input type="date" id="md_date" min="${today}">
+        <button class="btn btn-ghost" type="button" onclick="addDateChip()">+ إضافة تاريخ</button>
+      </div>
+      <div style="margin:8px 0 14px;" id="dateChips">${renderDateChips()}</div>
+      <button class="btn btn-primary" onclick="saveMultiDateSlots()">حفظ المواعيد</button>`;
+  }else{
+    el.innerHTML = `
+      <label>التاريخ (تُضاف له كل الأوقات اللي تحطها)</label>
+      <input type="date" id="mt_date" min="${today}">
+      <label>أضف وقت للقائمة</label>
+      <div class="grid2">
+        <input type="time" id="mt_time">
+        <button class="btn btn-ghost" type="button" onclick="addTimeChip()">+ إضافة وقت</button>
+      </div>
+      <div style="margin:8px 0 14px;" id="chips">${renderChips()}</div>
+      <button class="btn btn-primary" onclick="saveNewSlots()">حفظ المواعيد</button>`;
+  }
+}
+function renderDateChips(){
+  if(newSlotDates.length===0) return `<span class="sub">لم تُضف تواريخ بعد.</span>`;
+  return newSlotDates.map((d,i)=>`<span class="chip num">${fmtDate(d)}<button onclick="newSlotDates.splice(${i},1);document.getElementById('dateChips').innerHTML=renderDateChips()">×</button></span>`).join('');
+}
+function addDateChip(){
+  const d = document.getElementById('md_date').value;
+  if(!d){ alert('يرجى اختيار تاريخ أولاً'); return; }
+  if(!newSlotDates.includes(d)) newSlotDates.push(d);
+  document.getElementById('dateChips').innerHTML = renderDateChips();
+}
+async function saveMultiDateSlots(){
+  const time = document.getElementById('md_time').value;
+  if(!time || newSlotDates.length===0){ alert('يرجى اختيار الوقت وإضافة تاريخ واحد على الأقل'); return; }
+  try{
+    for(const date of newSlotDates){
+      await api('/api/admin/slots', { method:'POST', body: JSON.stringify({ date, times:[time] }) });
+    }
+    newSlotDates = [];
+    state.adminSlots = normalizeSlotDates(await api('/api/admin/slots'));
+    renderAdminPanel();
+  }catch(e){ alert(e.message); }
 }
 function renderChips(){
   if(newSlotTimes.length===0) return `<span class="sub">لم تُضف أوقات بعد.</span>`;
-  return newSlotTimes.map((t,i)=>`<span class="chip num">${t}<button onclick="removeChip(${i})">×</button></span>`).join('');
+  return newSlotTimes.map((t,i)=>`<span class="chip num">${to12h(t)}<button onclick="removeChip(${i})">×</button></span>`).join('');
 }
 function addTimeChip(){
-  const t = document.getElementById('ns_time').value;
+  const t = document.getElementById('mt_time').value;
   if(!t){ alert('يرجى اختيار الوقت أولاً'); return; }
   if(!newSlotTimes.includes(t)) newSlotTimes.push(t);
   document.getElementById('chips').innerHTML = renderChips();
 }
 function removeChip(i){ newSlotTimes.splice(i,1); document.getElementById('chips').innerHTML = renderChips(); }
 async function saveNewSlots(){
-  const date = document.getElementById('ns_date').value;
+  const date = document.getElementById('mt_date').value;
   if(!date || newSlotTimes.length===0){ alert('يرجى اختيار التاريخ وإضافة وقت واحد على الأقل'); return; }
   try{
     await api('/api/admin/slots', { method:'POST', body: JSON.stringify({ date, times:newSlotTimes }) });
@@ -532,10 +631,64 @@ async function saveNewSlots(){
     renderAdminPanel();
   }catch(e){ alert(e.message); }
 }
+
+/* ---------- admin calendar ---------- */
+const aDowNames = ['أحد','اثنين','ثلاثاء','أربعاء','خميس','جمعة','سبت'];
+function adminSlotsFor(dateStr){ return (state.adminSlots||[]).filter(s=>s.date===dateStr); }
+function renderAdminCalendar(){
+  const dowRow = document.getElementById('aDowRow');
+  if(dowRow) dowRow.innerHTML = aDowNames.map(n=>`<div class="a-cal-dow">${n}</div>`).join('');
+  document.getElementById('aCalTitle').textContent =
+    new Date(adminViewYear, adminViewMonth, 1).toLocaleDateString('ar-IQ',{month:'long',year:'numeric'});
+  const firstDay = new Date(adminViewYear, adminViewMonth, 1).getDay();
+  const daysInMonth = new Date(adminViewYear, adminViewMonth+1, 0).getDate();
+  let html = '';
+  for(let i=0;i<firstDay;i++) html += `<div class="a-cal-day empty"></div>`;
+  for(let day=1; day<=daysInMonth; day++){
+    const yy = adminViewYear, mm = String(adminViewMonth+1).padStart(2,'0'), dd = String(day).padStart(2,'0');
+    const dateStr = `${yy}-${mm}-${dd}`;
+    const daySlots = adminSlotsFor(dateStr);
+    const hasOpen = daySlots.some(s=>!s.booking_id);
+    const hasTaken = daySlots.some(s=>s.booking_id);
+    let cls = 'a-cal-day';
+    if(daySlots.length===0) cls += ' none';
+    else if(hasOpen) cls += ' has-open'; else if(hasTaken) cls += ' has-full';
+    if(dateStr===adminSelectedDate) cls += ' selected';
+    const dots = daySlots.length ? `<div class="a-dots">${hasOpen?'<span class="a-dot open"></span>':''}${hasTaken?'<span class="a-dot taken"></span>':''}</div>` : '';
+    html += `<div class="${cls}" onclick="pickAdminDay('${dateStr}')">${day}${dots}</div>`;
+  }
+  document.getElementById('aCalGrid').innerHTML = html;
+}
+function changeAdminMonth(dir){
+  adminViewMonth += dir;
+  if(adminViewMonth<0){adminViewMonth=11;adminViewYear--;}
+  if(adminViewMonth>11){adminViewMonth=0;adminViewYear++;}
+  renderAdminCalendar();
+  document.getElementById('aDayDetail').innerHTML='';
+}
+function pickAdminDay(dateStr){
+  adminSelectedDate = dateStr;
+  renderAdminCalendar();
+  const daySlots = adminSlotsFor(dateStr).sort((a,b)=>a.time.localeCompare(b.time));
+  let rows = daySlots.length ? daySlots.map(s=>{
+    const taken = !!s.booking_id;
+    return `<div class="a-slot-row">
+      <span class="num">${to12h(s.time)}</span>
+      <span>
+        ${taken? `<span class="status-tag status-taken" style="cursor:pointer;" onclick="viewBooking(${s.id})">محجوز — ${esc(s.name)} ›</span>` : `<span class="status-tag status-free">متاح</span>`}
+        <button class="link-btn" style="color:#A3402E;margin-right:8px;" onclick="deleteSlot(${s.id})">حذف</button>
+      </span>
+    </div>`;
+  }).join('') : `<div class="sub">لا توجد مواعيد بهذا اليوم.</div>`;
+  document.getElementById('aDayDetail').innerHTML = `<h3 style="font-size:15px;color:var(--lapis-deep);margin:0 0 8px;">${fmtDate(dateStr)}</h3>${rows}`;
+}
+
 async function deleteSlot(id){
   if(!confirm('هل تريد حذف هذا الموعد؟ (سيُلغى الحجز المرتبط به إن وجد)')) return;
   try{ await api('/api/admin/slots/'+id, { method:'DELETE' });
-    state.adminSlots = normalizeSlotDates(await api('/api/admin/slots')); renderAdminPanel();
+    state.adminSlots = normalizeSlotDates(await api('/api/admin/slots'));
+    renderAdminCalendar();
+    if(adminSelectedDate) pickAdminDay(adminSelectedDate);
   }catch(e){ alert(e.message); }
 }
 async function viewBooking(slotId){
@@ -563,9 +716,53 @@ function closeModal(){ document.getElementById('modalHost').innerHTML=''; }
 async function cancelBooking(slotId){
   if(!confirm('هل تريد إلغاء هذا الحجز وإعادة فتح الموعد؟')) return;
   try{ await api('/api/admin/bookings/'+slotId, { method:'DELETE' });
-    closeModal(); state.adminSlots = normalizeSlotDates(await api('/api/admin/slots')); renderAdminPanel();
+    closeModal();
+    state.adminSlots = normalizeSlotDates(await api('/api/admin/slots'));
+    renderAdminCalendar();
+    if(adminSelectedDate) pickAdminDay(adminSelectedDate);
   }catch(e){ alert(e.message); }
 }
+
+/* ---------- monthly PDF export ---------- */
+async function exportAdminMonthPdf(){
+  const mm = String(adminViewMonth+1).padStart(2,'0');
+  const monthSlots = (state.adminSlots||[])
+    .filter(s => s.date.startsWith(`${adminViewYear}-${mm}`))
+    .sort((a,b)=> a.date===b.date ? a.time.localeCompare(b.time) : a.date.localeCompare(b.date));
+  const monthLabel = new Date(adminViewYear, adminViewMonth, 1).toLocaleDateString('ar-IQ',{month:'long',year:'numeric'});
+
+  const rows = monthSlots.map(s => `
+    <tr>
+      <td>${fmtDate(s.date)}</td>
+      <td>${to12h(s.time)}</td>
+      <td>${s.booking_id ? 'محجوز' : 'متاح'}</td>
+      <td>${s.booking_id ? esc(s.name) : '—'}</td>
+    </tr>`).join('');
+
+  let el = document.getElementById('pdfMonthExport');
+  if(!el){ el = document.createElement('div'); el.id='pdfMonthExport'; document.body.appendChild(el); }
+  el.innerHTML = `
+    <h3>مدينة أور السياحية — تقرير مواعيد ${monthLabel}</h3>
+    <table>
+      <thead><tr><th>التاريخ</th><th>الوقت</th><th>الحالة</th><th>الحاجز</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="4">لا توجد مواعيد بهذا الشهر</td></tr>'}</tbody>
+    </table>`;
+  el.style.position='fixed'; el.style.top='0'; el.style.left='0'; el.style.zIndex='-1'; el.style.width='700px';
+
+  try{
+    const canvas = await html2canvas(el, { scale:2, backgroundColor:'#ffffff' });
+    const imgData = canvas.toDataURL('image/jpeg', 0.92);
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('p','mm','a4');
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const imgWidth = pageWidth - 20;
+    const imgHeight = canvas.height * imgWidth / canvas.width;
+    pdf.addImage(imgData, 'JPEG', 10, 10, imgWidth, imgHeight);
+    pdf.save(`مواعيد-${monthLabel}.pdf`);
+  }catch(e){ alert('تعذّر إنشاء ملف PDF، حاول مجدداً.'); }
+  el.style.top='-9999px'; el.style.left='-9999px';
+}
+
 async function changePassPrompt(){
   const oldPassword = prompt('أدخل كلمة المرور الحالية:'); if(oldPassword===null) return;
   const newPassword = prompt('أدخل كلمة المرور الجديدة (6 أحرف على الأقل):'); if(newPassword===null) return;
