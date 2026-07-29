@@ -1,13 +1,11 @@
 const express = require('express');
 const cors = require('cors');
-const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 const { pool, initDb } = require('./db');
 
 const app = express();
-app.use(cors());
 app.use(cors());
 app.use(express.json({ limit: '15mb' })); // allow room for the 3 attached images
 
@@ -39,6 +37,23 @@ app.get('/api/slots/available', async (req, res) => {
       FROM slots s
       LEFT JOIN bookings b ON b.slot_id = s.id
       WHERE b.id IS NULL AND s.date >= CURRENT_DATE
+      ORDER BY s.date, s.time
+    `);
+    res.json(r.rows);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'خطأ في الخادم' });
+  }
+});
+
+// list ALL upcoming slots (available + taken) for the calendar view — no personal booker data exposed
+app.get('/api/slots/calendar', async (req, res) => {
+  try {
+    const r = await pool.query(`
+      SELECT s.id, s.date, s.time, (b.id IS NOT NULL) AS taken
+      FROM slots s
+      LEFT JOIN bookings b ON b.slot_id = s.id
+      WHERE s.date >= CURRENT_DATE
       ORDER BY s.date, s.time
     `);
     res.json(r.rows);
@@ -185,20 +200,6 @@ app.post('/api/admin/change-password', requireAuth, async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-
-async function ensureAdmin() {
-  const username = process.env.ADMIN_USERNAME || 'admin';
-  const password = process.env.ADMIN_PASSWORD || 'ChangeMe123!';
-  const existing = await pool.query('SELECT id FROM admins WHERE username=$1', [username]);
-  if (existing.rows.length === 0) {
-    const hash = await bcrypt.hash(password, 10);
-    await pool.query('INSERT INTO admins (username, password_hash) VALUES ($1,$2)', [username, hash]);
-    console.log('✔ Admin account created:', username);
-  } else {
-    console.log('✔ Admin account already exists');
-  }
-}
-
-initDb().then(ensureAdmin).then(() => {
+initDb().then(() => {
   app.listen(PORT, () => console.log(`✔ Server running on port ${PORT}`));
 });
