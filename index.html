@@ -165,9 +165,15 @@ function compressImage(file){
 }
 
 async function init(){
-  try{ state.slots = await api('/api/slots/calendar'); }
+  try{ state.slots = normalizeSlotDates(await api('/api/slots/calendar')); }
   catch(e){ state.slots = []; }
   render();
+}
+// ✅ الإصلاح: Postgres يرجع حقل DATE بصيغة كاملة مثل "2026-08-01T00:00:00.000Z"
+// بينما التقويم يبني ويقارن تواريخه بصيغة "YYYY-MM-DD" فقط.
+// هذه الدالة توحّد كل تاريخ قادم من السيرفر لنفس صيغة التقويم قبل أي مقارنة.
+function normalizeSlotDates(slots){
+  return (slots||[]).map(s => ({ ...s, date: (s.date||'').toString().slice(0,10) }));
 }
 function goAdmin(){ state.view = (state.view==='booking') ? 'admin-login' : 'booking'; render(); }
 function render(){
@@ -347,7 +353,7 @@ async function submitBooking(ev){
   }catch(e){
     errBox.innerHTML = `<div class="msg msg-err">${esc(e.message)}</div>`;
     if(e.message.includes('حجز هذا الموعد')){
-      state.slots = await api('/api/slots/calendar').catch(()=>state.slots);
+      state.slots = normalizeSlotDates(await api('/api/slots/calendar').catch(()=>state.slots));
       setTimeout(()=>{ state.selectedSlot=null; state.selectedDate=null; state.step=1; render(); }, 1800);
     }
   }
@@ -436,7 +442,7 @@ async function downloadPdf(){
 }
 async function newBooking(){
   state.step=1; state.selectedSlot=null; state.selectedDate=null; state.images={front:null,back:null,letter:null};
-  state.slots = await api('/api/slots/calendar').catch(()=>state.slots);
+  state.slots = normalizeSlotDates(await api('/api/slots/calendar').catch(()=>state.slots));
   render();
 }
 
@@ -458,7 +464,7 @@ async function doLogin(){
   try{
     const r = await api('/api/admin/login', { method:'POST', body: JSON.stringify({ username:u, password:p }) });
     state.token = r.token; state.view='admin-panel';
-    state.adminSlots = await api('/api/admin/slots');
+    state.adminSlots = normalizeSlotDates(await api('/api/admin/slots'));
     render();
   }catch(e){
     document.getElementById('loginErr').innerHTML = `<div class="msg msg-err">${esc(e.message)}</div>`;
@@ -522,14 +528,14 @@ async function saveNewSlots(){
   try{
     await api('/api/admin/slots', { method:'POST', body: JSON.stringify({ date, times:newSlotTimes }) });
     newSlotTimes = [];
-    state.adminSlots = await api('/api/admin/slots');
+    state.adminSlots = normalizeSlotDates(await api('/api/admin/slots'));
     renderAdminPanel();
   }catch(e){ alert(e.message); }
 }
 async function deleteSlot(id){
   if(!confirm('هل تريد حذف هذا الموعد؟ (سيُلغى الحجز المرتبط به إن وجد)')) return;
   try{ await api('/api/admin/slots/'+id, { method:'DELETE' });
-    state.adminSlots = await api('/api/admin/slots'); renderAdminPanel();
+    state.adminSlots = normalizeSlotDates(await api('/api/admin/slots')); renderAdminPanel();
   }catch(e){ alert(e.message); }
 }
 async function viewBooking(slotId){
@@ -557,7 +563,7 @@ function closeModal(){ document.getElementById('modalHost').innerHTML=''; }
 async function cancelBooking(slotId){
   if(!confirm('هل تريد إلغاء هذا الحجز وإعادة فتح الموعد؟')) return;
   try{ await api('/api/admin/bookings/'+slotId, { method:'DELETE' });
-    closeModal(); state.adminSlots = await api('/api/admin/slots'); renderAdminPanel();
+    closeModal(); state.adminSlots = normalizeSlotDates(await api('/api/admin/slots')); renderAdminPanel();
   }catch(e){ alert(e.message); }
 }
 async function changePassPrompt(){
