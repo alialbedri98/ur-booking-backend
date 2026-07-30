@@ -373,24 +373,34 @@ async function submitBooking(ev){
   if(!state.images.front || !state.images.back || !state.images.letter){
     errBox.innerHTML = `<div class="msg msg-err">يرجى إرفاق الصور الثلاث المطلوبة.</div>`; return;
   }
-  errBox.innerHTML = `<div class="msg msg-ok">جارٍ حفظ الحجز...</div>`;
+  // ✅ لا نحفظ الحجز بالسستم هنا بعد — بس نجهّز بياناته وننتقل لمرحلة الموافقة على الشروط
   const slot = state.slots.find(s=>s.id===state.selectedSlot);
+  state.pendingBooking = { name, phone, university:uni, college, department:dept, date:slot.date, time:slot.time };
+  state.bookingConfirmed = false;
+  state.step = 3; render();
+}
+async function finalizeBooking(){
+  const box = document.getElementById('confirmErr');
+  const p = state.pendingBooking;
+  box.innerHTML = `<div class="msg msg-ok">جارٍ تثبيت الحجز...</div>`;
   try{
     const result = await api('/api/bookings', { method:'POST', body: JSON.stringify({
-      slotId: state.selectedSlot, name, phone, university:uni, college, department:dept,
+      slotId: state.selectedSlot, name:p.name, phone:p.phone, university:p.university, college:p.college, department:p.department,
       idFront: state.images.front, idBack: state.images.back, letter: state.images.letter
     })});
-    state.lastBooking = { ref: result.ref, name, date: slot.date, time: slot.time, university:uni, college, department:dept };
-    state.step = 3; render();
+    state.lastBooking = { ref: result.ref, ...p };
+    state.bookingConfirmed = true;
+    render();
   }catch(e){
-    errBox.innerHTML = `<div class="msg msg-err">${esc(e.message)}</div>`;
+    box.innerHTML = `<div class="msg msg-err">${esc(e.message)}</div>`;
     if(e.message.includes('حجز هذا الموعد')){
       state.slots = normalizeSlotDates(await api('/api/slots/calendar').catch(()=>state.slots));
-      setTimeout(()=>{ state.selectedSlot=null; state.selectedDate=null; state.step=1; render(); }, 1800);
+      setTimeout(()=>{ state.selectedSlot=null; state.selectedDate=null; state.pendingBooking=null; state.step=1; render(); }, 1800);
     }
   }
 }
 function renderConfirm(){
+  if(!state.bookingConfirmed) return renderTermsStep();
   const b = state.lastBooking;
   app.innerHTML = `${stepperHtml(3)}
     <div class="panel confirm-card">
@@ -402,6 +412,25 @@ function renderConfirm(){
         <div><b>الموعد:</b> ${fmtDate(b.date)} — الساعة <span class="num">${to12h(b.time)}</span></div>
         <div><b>الجامعة / الكلية / القسم:</b> ${esc(b.university)} / ${esc(b.college)} / ${esc(b.department)}</div>
       </div>
+      <div class="actions" style="justify-content:center; flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="downloadPdf()">تحميل تعهد الحجز PDF ⬇</button>
+        <button class="btn btn-ghost" onclick="newBooking()">إجراء حجز آخر</button>
+      </div>
+    </div>`;
+}
+function renderTermsStep(){
+  const p = state.pendingBooking;
+  app.innerHTML = `${stepperHtml(3)}
+    <div class="panel confirm-card">
+      <h2>مراجعة الحجز والموافقة على الشروط</h2>
+      <div class="note-box" style="background:#EFE4CD;border-radius:5px;padding:10px 14px;font-size:12.5px;margin:10px 0;text-align:right;">
+        ⚠ الحجز لسه غير مؤكد ولا محفوظ بالسستم — يجب الموافقة على الشروط أدناه أولاً لإتمامه.
+      </div>
+      <div class="summary-box" style="text-align:right;">
+        <div><b>الاسم:</b> ${esc(p.name)}</div>
+        <div><b>الموعد:</b> ${fmtDate(p.date)} — الساعة <span class="num">${to12h(p.time)}</span></div>
+        <div><b>الجامعة / الكلية / القسم:</b> ${esc(p.university)} / ${esc(p.college)} / ${esc(p.department)}</div>
+      </div>
       <div class="summary-box" style="text-align:right;">
         <h3 style="margin-top:0;">التعهد بالالتزام بالشروط والقوانين</h3>
         <ol style="padding-right:20px; line-height:2; font-size:13.5px;">
@@ -412,16 +441,18 @@ function renderConfirm(){
           <li>يُمنع منعاً باتاً استخدام الألعاب النارية داخل الموقع.</li>
         </ol>
         <label style="display:flex; align-items:flex-start; gap:8px; font-weight:600; margin-top:10px; cursor:pointer;">
-          <input type="checkbox" id="agreeTerms" style="margin-top:3px; width:auto;" onchange="document.getElementById('downloadBtn').disabled=!this.checked;">
+          <input type="checkbox" id="agreeTerms" style="margin-top:3px; width:auto;" onchange="document.getElementById('confirmBtn').disabled=!this.checked;">
           أقر أنا الموقّع أدناه بأنني اطّلعت على الشروط أعلاه وألتزم بها بالكامل.
         </label>
       </div>
+      <div id="confirmErr"></div>
       <div class="actions" style="justify-content:center; flex-wrap:wrap;">
-        <button id="downloadBtn" class="btn btn-primary" disabled onclick="downloadPdf()">تحميل تعهد الحجز PDF ⬇</button>
-        <button class="btn btn-ghost" onclick="newBooking()">إجراء حجز آخر</button>
+        <button class="btn btn-ghost" onclick="backToStep2Edit()">→ رجوع للتعديل</button>
+        <button id="confirmBtn" class="btn btn-primary" disabled onclick="finalizeBooking()">تأكيد الحجز نهائياً</button>
       </div>
     </div>`;
 }
+function backToStep2Edit(){ state.step = 2; render(); }
 async function downloadPdf(){
   const b = state.lastBooking;
   const tpl = document.getElementById('pdfTemplate');
@@ -474,6 +505,7 @@ async function downloadPdf(){
 }
 async function newBooking(){
   state.step=1; state.selectedSlot=null; state.selectedDate=null; state.images={front:null,back:null,letter:null};
+  state.pendingBooking=null; state.bookingConfirmed=false;
   state.slots = normalizeSlotDates(await api('/api/slots/calendar').catch(()=>state.slots));
   render();
 }
